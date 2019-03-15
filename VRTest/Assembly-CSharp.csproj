@@ -60,6 +60,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Debug\CameraRigTeleport.cs" />
     <Compile Include="Assets\Scripts\Debug\SpinSimple.cs" />
     <Compile Include="Assets\Scripts\Debug\TeleportSticking.cs" />
     <Reference Include="Unity.TextMeshPro.Editor">

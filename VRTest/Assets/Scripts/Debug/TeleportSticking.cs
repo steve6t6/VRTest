@@ -16,8 +16,10 @@ public class TeleportSticking : MonoBehaviour
             {
                 if(mg_LastHit != other.gameObject)
                 {
+
                     //Debug.Log("Hit new surface");
                     //transform.SetParent(other.transform);
+                    mg_LastHit = other.gameObject;
                 }
             }
             else

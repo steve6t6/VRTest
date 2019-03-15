@@ -244,7 +244,8 @@ namespace Valve.VR.InteractionSystem
 					{
 						if ( pointerHand == hand ) //This is the pointer hand
 						{
-							TryTeleportPlayer();
+                            //Debug.Log("Try teleport");
+                            TryTeleportPlayer();
 						}
 					}
 				}
@@ -331,7 +332,7 @@ namespace Valve.VR.InteractionSystem
 
 			//Trace to see if the pointer hit anything
 			RaycastHit hitInfo;
-			teleportArc.SetArcData( pointerStart, arcVelocity, true, pointerAtBadAngle );
+			teleportArc.SetArcData( pointerStart, arcVelocity, false, pointerAtBadAngle );
 			if ( teleportArc.DrawArc( out hitInfo ) )
 			{
 				hitSomething = true;
@@ -377,7 +378,17 @@ namespace Valve.VR.InteractionSystem
 				pointedAtTeleportMarker = hitTeleportMarker;
 				pointedAtPosition = hitInfo.point;
 
-				if ( showPlayAreaMarker )
+                //Orient the Valid reticle to the normal of the trace hit point
+                Vector3 normalToUse = hitInfo.normal;
+                float angle = Vector3.Angle(hitInfo.normal, Vector3.up);
+                if (angle < 15.0f)
+                {
+                    normalToUse = Vector3.up;
+                }
+                invalidReticleTargetRotation = Quaternion.FromToRotation(Vector3.up, normalToUse);
+                destinationReticleTransform.rotation = Quaternion.Slerp(destinationReticleTransform.rotation, invalidReticleTargetRotation, 0.1f);
+
+                if ( showPlayAreaMarker )
 				{
 					//Show the play area marker if this is a teleport area
 					TeleportArea teleportArea = pointedAtTeleportMarker as TeleportArea;
@@ -404,8 +415,10 @@ namespace Valve.VR.InteractionSystem
 						}
 
 						playAreaPreviewTransform.position = pointedAtPosition + offsetToUse;
+                        // Spins?
+                        //playAreaPreviewTransform.rotation = Quaternion.Slerp(destinationReticleTransform.rotation, invalidReticleTargetRotation, 0.1f);
 
-						showPlayAreaPreview = true;
+                        showPlayAreaPreview = true;
 					}
 				}
 
@@ -435,8 +448,8 @@ namespace Valve.VR.InteractionSystem
 				invalidReticleTargetRotation = Quaternion.FromToRotation( Vector3.up, normalToUse );
 				invalidReticleTransform.rotation = Quaternion.Slerp( invalidReticleTransform.rotation, invalidReticleTargetRotation, 0.1f );
 
-				//Scale the invalid reticle based on the distance from the player
-				float distanceFromPlayer = Vector3.Distance( hitInfo.point, player.hmdTransform.position );
+                //Scale the invalid reticle based on the distance from the player
+                float distanceFromPlayer = Vector3.Distance( hitInfo.point, player.hmdTransform.position );
 				float invalidReticleCurrentScale = Util.RemapNumberClamped( distanceFromPlayer, invalidReticleMinScaleDistance, invalidReticleMaxScaleDistance, invalidReticleMinScale, invalidReticleMaxScale );
 				invalidReticleScale.x = invalidReticleCurrentScale;
 				invalidReticleScale.y = invalidReticleCurrentScale;
@@ -814,8 +827,9 @@ namespace Valve.VR.InteractionSystem
 			{
 				if ( pointedAtTeleportMarker != null && pointedAtTeleportMarker.locked == false )
 				{
-					//Pointing at an unlocked teleport marker
-					teleportingToMarker = pointedAtTeleportMarker;
+                    Debug.Log("Pointed at marker not null & not locked");
+                    //Pointing at an unlocked teleport marker
+                    teleportingToMarker = pointedAtTeleportMarker;
 					InitiateTeleportFade();
 
 					CancelTeleportHint();
@@ -834,7 +848,8 @@ namespace Valve.VR.InteractionSystem
 			TeleportPoint teleportPoint = teleportingToMarker as TeleportPoint;
 			if ( teleportPoint != null && teleportPoint.teleportType == TeleportPoint.TeleportPointType.SwitchToNewScene )
 			{
-				currentFadeTime *= 3.0f;
+                Debug.Log("Switch to new scene?");
+                currentFadeTime *= 3.0f;
 				Teleport.ChangeScene.Send( currentFadeTime );
 			}
 
@@ -853,8 +868,8 @@ namespace Valve.VR.InteractionSystem
 		private void TeleportPlayer()
 		{
 			teleporting = false;
-
-			Teleport.PlayerPre.Send( pointedAtTeleportMarker );
+            Debug.Log("Teleporting to point " + pointedAtTeleportMarker.name);
+            Teleport.PlayerPre.Send( pointedAtTeleportMarker );
 
 			SteamVR_Fade.Start( Color.clear, currentFadeTime );
 
@@ -877,27 +892,37 @@ namespace Valve.VR.InteractionSystem
 			TeleportArea teleportArea = teleportingToMarker as TeleportArea;
 			if ( teleportArea != null )
 			{
-				if ( floorFixupMaximumTraceDistance > 0.0f )
+                Debug.Log("Teleporting area != null");
+                if ( floorFixupMaximumTraceDistance > 0.0f )
 				{
-					RaycastHit raycastHit;
+                    Debug.Log("Looking for floor");
+                    RaycastHit raycastHit;
 					if ( Physics.Raycast( teleportPosition + 0.05f * Vector3.down, Vector3.down, out raycastHit, floorFixupMaximumTraceDistance, floorFixupTraceLayerMask ) )
 					{
 						teleportPosition = raycastHit.point;
+                        Debug.Log("Teleporting onto " +  raycastHit.transform.name);
 					}
 				}
 			}
 
 			if ( teleportingToMarker.ShouldMovePlayer() )
 			{
-				Vector3 playerFeetOffset = player.trackingOriginTransform.position - player.feetPositionGuess;
-				player.trackingOriginTransform.position = teleportPosition + playerFeetOffset;
+                Debug.Log("Teleporting should move player");
+                Vector3 playerFeetOffset = player.trackingOriginTransform.position - player.feetPositionGuess;
+                if(pointedAtTeleportMarker.GetComponentInParent<Transform>())
+                {
+                    player.trackingOriginTransform.rotation = pointedAtTeleportMarker.transform.rotation;
+                    player.trackingOriginTransform.position = teleportPosition + playerFeetOffset;
+                    player.trackingOriginTransform.SetParent(pointedAtTeleportMarker.GetComponentInParent<Transform>());
+                    player.trackingOriginTransform.localScale = player.trackingOriginTransform.localScale;// new Vector3(1, 1, 1);
+                }
 			}
 			else
 			{
 				teleportingToMarker.TeleportPlayer( pointedAtPosition );
 			}
-
-			Teleport.Player.Send( pointedAtTeleportMarker );
+            Debug.Log("Teleporting sending player");
+            Teleport.Player.Send( pointedAtTeleportMarker );
 		}
 
 
@@ -1083,14 +1108,14 @@ namespace Valve.VR.InteractionSystem
 		{
 			if ( IsEligibleForTeleport( hand ) )
 			{
+                
 				if ( hand.noSteamVRFallbackCamera != null )
 				{
-					return Input.GetKeyUp( KeyCode.T );
+                    return Input.GetKeyUp( KeyCode.T );
 				}
 				else
                 {
                     return teleportAction.GetStateUp(hand.handType);
-
                     //return hand.controller.GetPressUp( SteamVR_Controller.ButtonMask.Touchpad );
                 }
 			}
