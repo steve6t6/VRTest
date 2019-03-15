@@ -332,7 +332,7 @@ namespace Valve.VR.InteractionSystem
 
 			//Trace to see if the pointer hit anything
 			RaycastHit hitInfo;
-			teleportArc.SetArcData( pointerStart, arcVelocity, false, pointerAtBadAngle );
+			teleportArc.SetArcData( pointerStart, arcVelocity, false, false );
 			if ( teleportArc.DrawArc( out hitInfo ) )
 			{
 				hitSomething = true;
@@ -341,7 +341,7 @@ namespace Valve.VR.InteractionSystem
 
 			if ( pointerAtBadAngle )
 			{
-				hitTeleportMarker = null;
+				//hitTeleportMarker = null;
 			}
 
 			HighlightSelected( hitTeleportMarker );
